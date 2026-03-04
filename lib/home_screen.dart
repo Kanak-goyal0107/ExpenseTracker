@@ -7,13 +7,15 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Home Screen"),
+        title: const Text(""),
         centerTitle: true,
       ),
-      body: const Center(
-        child: Text(
-          "Welcome to Expense Tracker",
-          style: TextStyle(fontSize: 20),
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+              image: AssetImage("assets/images/img.png"),
+              fit: BoxFit.cover,
+          ),
         ),
       ),
     );
