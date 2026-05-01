@@ -10,21 +10,16 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+
   @override
   void initState() {
     super.initState();
 
-    Timer(
-      const Duration(seconds: 2),
-          () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const HomeScreen(),
-          ),
-        );
-      },
-    );
+    Future.delayed(const Duration(seconds: 2), () {
+      if (!mounted) return;
+
+      Navigator.pushReplacementNamed(context, "/home");
+    });
   }
 
   @override
@@ -33,7 +28,7 @@ class _SplashScreenState extends State<SplashScreen> {
       backgroundColor: Colors.green,
       body: const Center(
         child: Text(
-          "Expense Tracker",
+          "Expense Tracker App",
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "684884749998",
+    "project_id": "biztrack-5050e",
+    "storage_bucket": "biztrack-5050e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:684884749998:android:4d0d5f415e0c2c074d073f",
+        "android_client_info": {
+          "package_name": "com.example.expense_tracker"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDHyIPmv4L8UtcuXQIDiPe09yie1FJJLHY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
