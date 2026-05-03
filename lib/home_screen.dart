@@ -1,6 +1,8 @@
+import 'package:expense_tracker/main.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'chart_screen.dart';
+import 'services/gemini_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,8 +13,36 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
 
+  String aiResponse = "";
+  bool isLoadingAI = false;
+
+  void getAIAdvice(double balance) async {
+    setState(() {
+      isLoadingAI = true;
+      aiResponse = "";
+    });
+
+    try {
+      String response = await GeminiService.getAdvice(
+        "User balance is ₹$balance. Give one smart financial tip in one line.",
+      );
+
+      setState(() {
+        aiResponse = response;
+      });
+    } catch (e) {
+      print("AI ERROR: $e");
+      setState(() {
+        aiResponse = "⚠️ Unable to fetch AI advice. Try again.";
+      });
+    }
+
+    setState(() {
+      isLoadingAI = false;
+    });
+  }
+
   Future<void> saveToFirebase(Map<String, dynamic> data) async {
-    print("Saving to Firebase: $data");
     await FirebaseFirestore.instance.collection("expenses").add({
       "name": data["name"],
       "amount": data["amount"],
@@ -45,7 +75,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> goToAddScreen() async {
     final result = await Navigator.pushNamed(context, "/add");
-    print("RESULT: $result");
     if (result != null) {
       await saveToFirebase(result as Map<String, dynamic>);
     }
@@ -55,11 +84,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("BizTrack"),
+        title: const Text("BizTrack",
+            style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.pie_chart),
+            icon: const Icon(Icons.bar_chart),
             onPressed: () {
               Navigator.push(
                 context,
@@ -69,102 +100,163 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             },
           ),
+          IconButton(
+            icon: Icon(
+              themeNotifier.value == ThemeMode.dark
+                  ? Icons.dark_mode
+                  : Icons.light_mode,
+            ),
+            onPressed: () {
+              themeNotifier.value =
+              themeNotifier.value == ThemeMode.dark
+                  ? ThemeMode.light
+                  : ThemeMode.dark;
+            },
+          ),
         ],
       ),
+
       floatingActionButton: FloatingActionButton(
         onPressed: goToAddScreen,
         child: const Icon(Icons.add),
       ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage("assets/images/img.png"),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('expenses')
-              .orderBy('timestamp', descending: true)
-              .snapshots(),
-          builder: (context, snapshot) {
 
-            if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('expenses')
+            .orderBy('timestamp', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
 
-            var docs = snapshot.data!.docs;
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            return Column(
-              children: [
-                const SizedBox(height: 40),
+          var docs = snapshot.data!.docs;
+          double balance = getBalance(docs);
 
-                Text(
-                  "Current Balance: ₹${getBalance(docs).toStringAsFixed(2)}",
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+
+              Container(
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFF5B86E5),
+                      Color(0xFFB06AB3),
+                      Color(0xFFFF7E5F),
+                    ],
                   ),
                 ),
-
-                const SizedBox(height: 10),
-
-                Expanded(
-                  child: docs.isEmpty
-                      ? const Center(
-                    child: Text(
-                      "No expenses added yet",
-                      style: TextStyle(color: Colors.white),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("Current Balance",
+                        style: TextStyle(color: Colors.white70)),
+                    const SizedBox(height: 6),
+                    Text(
+                      "₹${balance.toStringAsFixed(2)}",
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  )
-                      : ListView.builder(
-                    itemCount: docs.length,
-                    itemBuilder: (context, index) {
+                  ],
+                ),
+              ),
 
-                      var data =
-                      docs[index].data() as Map<String, dynamic>;
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ElevatedButton(
+                  onPressed: () => getAIAdvice(balance),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 45),
+                  ),
+                  child: const Text("Get AI Insight"),
+                ),
+              ),
 
-                      return Card(
-                        margin: const EdgeInsets.all(10),
-                        child: ListTile(
-                          leading: const Icon(Icons.money),
-                          title: Text(data["name"]),
-                          subtitle: Text(
-                              "${data["category"]} : ${data["date"]}"),
+              const SizedBox(height: 10),
 
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                "₹${data["type"] == "income" ? "+" : "-"} ${data["amount"]}",
-                                style: TextStyle(
-                                  color: data["type"] == "income"
-                                      ? Colors.green
-                                      : Colors.red,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete,
-                                    color: Colors.red),
-                                onPressed: () {
-                                  deleteExpense(docs[index].id);
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+              if (isLoadingAI)
+                const Center(child: CircularProgressIndicator())
+              else if (aiResponse.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Card(
+                    elevation: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(aiResponse),
+                    ),
                   ),
                 ),
-              ],
-            );
-          },
-        ),
+
+              const SizedBox(height: 10),
+
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Text("Recent Transactions",
+                    style:
+                    TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+
+              const SizedBox(height: 10),
+
+
+              Expanded(
+                child: docs.isEmpty
+                    ? const Center(child: Text("No expenses added yet"))
+                    : ListView.builder(
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+
+                    var data =
+                    docs[index].data() as Map<String, dynamic>;
+
+                    return Card(
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      child: ListTile(
+                        leading: const CircleAvatar(
+                          child: Icon(Icons.attach_money),
+                        ),
+                        title: Text(data["name"]),
+                        subtitle: Text(
+                            "${data["category"]} • ${data["date"]}"),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              "${data["type"] == "income" ? "+" : "-"}₹${data["amount"]}",
+                              style: TextStyle(
+                                color: data["type"] == "income"
+                                    ? Colors.green
+                                    : Colors.red,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete,
+                                  color: Colors.red),
+                              onPressed: () {
+                                deleteExpense(docs[index].id);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

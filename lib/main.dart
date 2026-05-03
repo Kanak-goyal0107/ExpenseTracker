@@ -6,6 +6,10 @@ import 'home_screen.dart';
 import 'splash_screen.dart';
 import 'add_screen.dart';
 
+
+final ValueNotifier<ThemeMode> themeNotifier =
+ValueNotifier(ThemeMode.light);
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -21,15 +25,35 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeNotifier,
+      builder: (context, currentMode, child) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
 
-      initialRoute: "/",
 
-      routes: {
-        "/": (context) => const SplashScreen(),
-        "/home": (context) => const HomeScreen(),
-        "/add": (context) => const AddScreen(),
+          themeMode: currentMode,
+
+
+          theme: ThemeData(
+            brightness: Brightness.light,
+            primarySwatch: Colors.blue,
+          ),
+
+
+          darkTheme: ThemeData(
+            brightness: Brightness.dark,
+            primarySwatch: Colors.blue,
+          ),
+
+          initialRoute: "/",
+
+          routes: {
+            "/": (context) => const SplashScreen(),
+            "/home": (context) => const HomeScreen(),
+            "/add": (context) => const AddScreen(),
+          },
+        );
       },
     );
   }
